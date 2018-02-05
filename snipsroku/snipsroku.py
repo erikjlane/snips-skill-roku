@@ -89,14 +89,3 @@ class SnipsRoku:
             return 'false'
         else:
             return 'false'
-
-
-#device_id = '192.168.169.87'
-#roku = SnipsRoku(device_id)
-#id = roku.get_app_id("CBS NEWS")
-#roku.launch_app(id)
-#try:
-   #roku.search_content('tv-show', "Black Mirror", None, True, 'Netflix', 4)
-#except ValueError as e:
-#    print e.message
-# roku.home_screen()
