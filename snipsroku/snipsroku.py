@@ -71,7 +71,6 @@ class SnipsRoku:
             raise ValueError('Either keyword or title need to be specified')
         r = requests.post(
              "http://{}:8060/search/browse?".format(self.roku_device_ip), params=payload)
-        print r.url
 
     def play_content(self):
         requests.post(
