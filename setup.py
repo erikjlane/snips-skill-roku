@@ -2,10 +2,11 @@
 from setuptools import setup
 
 setup(
-    name='snipssonos',
+    name='snipsroku',
     version='1.0.0',
     description='Roku skill for Snips',
-    author='The Als',
+    author='Snips Labs',
+    author_email='labs@snips.ai',
     license='MIT',
     install_requires=['requests'],
     keywords=['snips', 'roku'],
