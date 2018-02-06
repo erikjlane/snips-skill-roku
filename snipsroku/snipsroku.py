@@ -1,6 +1,7 @@
 #!/usr/local/bin/python
 # -*-: coding utf-8 -*-
 import requests
+import re
 import xml.etree.ElementTree as ET
 
 
@@ -69,16 +70,30 @@ class SnipsRoku:
             payload['keyword'] = keyword
         else:
             raise ValueError('Either keyword or title need to be specified')
-        r = requests.post(
+        requests.post(
              "http://{}:8060/search/browse?".format(self.roku_device_ip), params=payload)
 
-    def play_content(self):
+    def play(self):
         requests.post(
             "http://{}:8060/keypress/Play".format(self.roku_device_ip))
 
     def home_screen(self):
         requests.post(
             "http://{}:8060/keypress/Home".format(self.roku_device_ip))
+
+    @staticmethod
+    def parse_season(season_string):
+        """
+        Return the season as integer. It expects a string with the structure
+        string literal 'season' + ordinal number. Example season 10
+        :param season_string:
+        :return: integer
+        """
+        p = re.compile('\d+')
+        match = p.findall(season_string)
+        if match:
+            return int(match[0])
+        return None
 
     @staticmethod
     def bool2string(boolean):
