@@ -11,7 +11,7 @@ intents:
      media_provider = None
      season = None
      if snips.intent.mediaProvider:
-        media_provider = snips.intent.media_provider[0]
+        media_provider = snips.intent.mediaProvider[0]
      if snips.intent.season:
         season=snips.skill.parse_season(snips.intent.season[0])
      if snips.intent.mediaContent:
