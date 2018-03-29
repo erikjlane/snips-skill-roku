@@ -1,9 +1,7 @@
 class_name: SnipsRoku
 package_name: snipsroku
 description: Roku skill for Snips
-params:
-  roku_device_ip: YOUR_ROKU_DEVICE_IP
-
+parameters: ["roku_device_ip"]
 intents:
   - intent: playContent
     action: |
