@@ -3,10 +3,10 @@ from setuptools import setup
 
 setup(
     name='snipsroku',
-    version='1.0.0',
+    version='0.1.0',
     description='Roku skill for Snips',
     author='Snips Labs',
-    author_email='labs@snips.ai',
+    author_email='support@snips.ai',
     license='MIT',
     install_requires=['requests'],
     keywords=['snips', 'roku'],
