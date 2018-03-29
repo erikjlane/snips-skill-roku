@@ -1,8 +1,16 @@
 language: python
 python:
-  - "3.4"
+- '2.7'
 cache: pip
 install:
-  - python setup.py install
+- python setup.py install
 script:
-  - python setup.py test
+- python setup.py test
+deploy:
+  provider: pypi
+  user: snips
+  password:
+    secure: iUKZseFZ/rD+cKQv5ewWhCzfSNs3wwNtmvpqL++J3Oi9vwjXKSCN0+TNz2etK6SU6XjmpSbHMBu6xghEDD9PwIjmZqvDbDyV5Hy51Zst2sjU+uBWa2APEwAOtCEfCRbqBYdQIttVxp7ctnEE4UxFQYP0uqHtsKBChSU/wkMOFwXtoUpKExdn4AegZ0zGAcEudkTB/iWtwTVkVD6m+2HMICbWifMrq90MXaTPG5hV6JQE7u2asJfOMcf6jHKFlClag+YT5VuYNw1dPA/AYwfM+QWg54Ip0cm26OF76OgjmP8V6627I9iueBAUHzDUjJIO2NxhPxvlx85UnJKKWRb95KHUB2odw/aXvJkcl5LvmSgvW/ftTLzhTkP2ana2LIPC3WHTbbLUYCF9LMYXnWWX97ZB31+4HwThJPcR1Ek4bAphk+e8UZ0dVQ31aj9Zh/jsX2D74Te2Uza3jSA80OC3l0mZyCykebMVzOdqXhafRXdtVJaC2TZ3bfqMRx9DgGYdac3wj3mFxi6Q48H/34/92c7mU+I5iQR1ZOG5SchaYS4Xm44uZnkPSOhw6LgnBG/Zh73zGxHircRKZX+dpuIwKXQK+DR1bc9JZXnYKjXNvzZiDKp6gSngaFJWpN2enc7jVZVyuuYq/mG1vwe4z5KhKMgMUVDdhCAuxcuoebBTG/I=
+  on:
+    tags: true
+    branch: master
