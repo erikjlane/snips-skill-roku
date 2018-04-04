@@ -8,7 +8,7 @@ setup(
     author='Snips Labs',
     author_email='support@snips.ai',
     license='MIT',
-    install_requires=['requests'],
+    install_requires=['requests', 'mock'],
     keywords=['snips', 'roku'],
     packages=['snipsroku'],
     package_data={'snipsroku': ['Snipsspec']},
