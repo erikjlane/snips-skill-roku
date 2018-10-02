@@ -1,0 +1,5 @@
+[global]
+locale=en_US
+
+[secret]
+roku_device_ip=
