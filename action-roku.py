@@ -30,28 +30,28 @@ def read_configuration_file(configuration_file):
 def playContent(hermes, intent_message):
     media_provider = None
     season = None
-    if hermes.slots.mediaProvider is not None:
-        media_provider = hermes.slots.mediaProvider.first().value
-    if hermes.slots.season is not None:
-        season = hermes.skill.parse_season(hermes.slots.season.first().value)
-    if hermes.slots.mediaContent is not None:
-        media_content = hermes.slots.mediaContent.first().value
+    if len(intent_message.slots.mediaProvider):
+        media_provider = intent_message.slots.mediaProvider.first().value
+    if len(intent_message.slots.season):
+        season = hermes.skill.parse_season(intent_message.slots.season.first().value)
+    if len(intent_message.slots.mediaContent):
+        media_content = intent_message.slots.mediaContent.first().value
     try:
         hermes.skill.search_content(None, media_content, None, True,
                                     media_provider, season)
     except ValueError as e:
         hermes.publish_end_session(intent_message.session_id, e.message)
     else:
-        hermes.publish_end_session(intent_message.session_id, e.message)
+        hermes.publish_end_session(intent_message.session_id, "")
 
 def searchContent(hermes, intent_message):
     hermes.publish_end_session(intent_message.session_id, "")
     content_type = None
     keyword = None
-    if hermes.slots.contentType is not None:
-        content_type = hermes.slots.contentType.first().value
-    if hermes.slots.contentType is not None:
-        keyword = hermes.slots.searchKeyword.first().value
+    if intent_message.slots.contentType is not None:
+        content_type = intent_message.slots.contentType.first().value
+    if intent_message.slots.contentType is not None:
+        keyword = intent_message.slots.searchKeyword.first().value
         hermes.skill.search_content(content_type, keyword)
 
 def goHome(hermes, intent_message):
@@ -60,8 +60,8 @@ def goHome(hermes, intent_message):
 
 def launchApp(hermes, intent_message):
     hermes.publish_end_session(intent_message.session_id, "")
-    if hermes.slots.appName is not None:
-        app_name = hermes.slots.appName.first().value
+    if intent_message.slots.appName is not None:
+        app_name = intent_message.slots.appName.first().value
         app_id = hermes.skill.get_app_id(app_name)
         hermes.skill.launch_app(app_id)
 

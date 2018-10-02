@@ -37,7 +37,7 @@ class SnipsRoku:
     def get_app_id(self, app_name):
         # we call set_available_apps every time just in case new apps have been installed
         self.set_available_apps()
-        return self.apps[app_name.lower()]
+        return self.apps.get(app_name.lower())
 
     def search_content(self, content_type, keyword=None, title=None, launch=False, provider=None,
                        season=None):
