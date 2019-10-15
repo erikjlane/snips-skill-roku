@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 
 class SnipsRoku:
 
-    def __init__(self, roku_device_ip=None, locale=None):
+    def __init__(self, roku_device_ip=None):
         if roku_device_ip is None:
             raise ValueError('You need to provide a Roku device IP')
         self.roku_device_ip = roku_device_ip
@@ -77,6 +77,9 @@ class SnipsRoku:
         requests.post(
             "http://{}:8060/keypress/Play".format(self.roku_device_ip))
 
+    def pause(self):
+        requests.post(
+            "http://{}:8060/keypress/Pause".format(self.roku_device_ip))
     def home_screen(self):
         requests.post(
             "http://{}:8060/keypress/Home".format(self.roku_device_ip))
@@ -99,7 +102,5 @@ class SnipsRoku:
     def bool2string(boolean):
         if boolean:
             return 'true'
-        elif boolean is False:
-            return 'false'
         else:
             return 'false'
