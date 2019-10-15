@@ -1,0 +1,47 @@
+{
+	"config": {
+	},
+	"intent" : {
+		"group":{
+			"play_content" : "snips-demo:playContent",
+			"search_content" : "snips-demo:searchContent",
+			"tv_pause" : "snips-demo:tvPause",
+			"launch_app" : "snips-demo:launchApp",
+			"go_home" : "snips-demo:goHome",
+			"tv_play" : "snips-demo:tvPlay"
+		},
+		"threshold": {
+			"intentBad": 0.3,
+			"intentGood": 0.6
+		}
+	},
+	"tts": { 
+		"Ready" : "Ready to control you ROKU device"
+	},
+	"slot": {
+		"media_provider" : {
+			"threshold" : 0.3,
+			"name" : "mediaProvider"
+		},
+		"season": {
+			"threshold": 0.3,
+			"name" : "season"
+		},
+		"media_content": {
+			"threshold": 0.3,
+			"name" : "mediaContent"
+		},
+		"search_keyword": {
+			"threshold": 0.3,
+			"name" : "searchKeyword"
+		},
+		"content_type": {
+			"threshold": 0.3,
+			"name" : "contentType"
+		},
+		"app_name": {
+			"threshold": 0.3,
+			"name" : "appName"
+		}
+	}
+}

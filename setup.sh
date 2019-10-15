@@ -5,7 +5,7 @@ VENV=venv
 if [ ! -d "$VENV" ]
 then
 
-	PYTHON=`which python2`
+	PYTHON=`which python3`
 
 	if [ ! -f $PYTHON ]
 	then
@@ -17,7 +17,9 @@ fi
 
 . $VENV/bin/activate
 
+if [ ! -e "./config.ini" ]
+then
+            cp config.ini.default config.ini
+fi
 
-pip install -r requirements.txt
-
-cp config.ini.default config.ini
+pip3 install -r requirements.txt
