@@ -1,4 +1,6 @@
+lxml
+requests<2.11
+roku
 hermes_python>=0.1
 -e hermes_demo_helper
-requests
 mock

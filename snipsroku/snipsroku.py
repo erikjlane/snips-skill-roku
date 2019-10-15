@@ -3,13 +3,19 @@
 import requests
 import re
 import xml.etree.ElementTree as ET
-
+from roku import Roku
 
 class SnipsRoku:
 
     def __init__(self, roku_device_ip=None):
         if roku_device_ip is None:
-            raise ValueError('You need to provide a Roku device IP')
+            tmp = Roku.discover()
+            if len(tmp) == 0:
+                raise ValueError('You need to provide a Roku device IP')
+            self.device = tmp[0]
+            roku_device_ip = tmp[0].host
+        else:
+            self.device = Roku(roku_device_ip)
         self.roku_device_ip = roku_device_ip
         self.apps = {}
         self.apps_string_list = ""
@@ -31,6 +37,7 @@ class SnipsRoku:
         return self.apps
 
     def launch_app(self, app_id):
+        
         requests.post(
             "http://{}:8060/launch/{}".format(self.roku_device_ip, app_id))
 
@@ -50,15 +57,14 @@ class SnipsRoku:
         :param provider: The name of the provider where to launch the content. Case sensitive and
         :param season: The season of the series you the user wants to watch
         """
-
         payload = {'type': content_type, 'launch': SnipsRoku.bool2string(launch),
-                   'season': season}
+                                               'season': SnipsRoku.parse_season(season)}
 
         # when launching pick the first content and provider available if not specified
         if launch:
             payload['match-any'] = 'true'
             if provider is None:
-                # we call set_available_apps every time just in case new apps have been installed
+            # we call set_available_apps every time just in case new apps have been installed
                 self.set_available_apps()
                 payload['provider'] = self.apps_string_list
             else:
@@ -71,18 +77,16 @@ class SnipsRoku:
         else:
             raise ValueError('Either keyword or title need to be specified')
         requests.post(
-             "http://{}:8060/search/browse?".format(self.roku_device_ip), params=payload)
+            "http://{}:8060/search/browse?".format(self.roku_device_ip), params=payload)
 
     def play(self):
-        requests.post(
-            "http://{}:8060/keypress/Play".format(self.roku_device_ip))
+        self.device.play()
 
     def pause(self):
-        requests.post(
-            "http://{}:8060/keypress/Pause".format(self.roku_device_ip))
+        self.device.play()
+    
     def home_screen(self):
-        requests.post(
-            "http://{}:8060/keypress/Home".format(self.roku_device_ip))
+        self.device.home()
 
     @staticmethod
     def parse_season(season_string):
@@ -92,6 +96,8 @@ class SnipsRoku:
         :param season_string:
         :return: integer
         """
+        if(season_string is None):
+            return None
         p = re.compile('\d+')
         match = p.findall(season_string)
         if match:
