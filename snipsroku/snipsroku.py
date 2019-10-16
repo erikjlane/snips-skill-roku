@@ -16,9 +16,11 @@ class SnipsRoku:
             roku_device_ip = tmp[0].host
         else:
             self.device = Roku(roku_device_ip)
+        print("connected to ROKU device on: " + roku_device_ip)
         self.roku_device_ip = roku_device_ip
         self.apps = {}
         self.apps_string_list = ""
+        self._is_playing = False
 
     def set_available_apps(self):
         r = requests.get(
@@ -80,10 +82,16 @@ class SnipsRoku:
             "http://{}:8060/search/browse?".format(self.roku_device_ip), params=payload)
 
     def play(self):
+        if self._is_playing:
+            return
         self.device.play()
+        self._is_playing = True
 
     def pause(self):
+        if not self._is_playing:
+            return
         self.device.play()
+        self._is_playing = False
     
     def home_screen(self):
         self.device.home()
