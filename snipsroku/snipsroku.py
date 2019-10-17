@@ -39,7 +39,7 @@ class SnipsRoku:
         return self.apps
 
     def launch_app(self, app_id):
-        
+        self._is_playing = False
         requests.post(
             "http://{}:8060/launch/{}".format(self.roku_device_ip, app_id))
 
@@ -59,6 +59,8 @@ class SnipsRoku:
         :param provider: The name of the provider where to launch the content. Case sensitive and
         :param season: The season of the series you the user wants to watch
         """
+        self._is_playing = True
+        
         payload = {'type': content_type, 'launch': SnipsRoku.bool2string(launch),
                                                'season': SnipsRoku.parse_season(season)}
 
@@ -94,6 +96,7 @@ class SnipsRoku:
         self._is_playing = False
     
     def home_screen(self):
+        self._is_playing = False
         self.device.home()
 
     @staticmethod
