@@ -9,13 +9,22 @@ class SnipsRoku:
 
     def __init__(self, roku_device_ip=None):
         if roku_device_ip is None:
-            tmp = Roku.discover()
-            if len(tmp) == 0:
+            devices = Roku.discover()
+            for device in devices:
+                try:
+                    device.home()
+                    self.device = device
+                    roku_device_ip = device.host
+                except:
+                    pass
+            if self.device is None:
                 raise ValueError('You need to provide a Roku device IP')
-            self.device = tmp[0]
-            roku_device_ip = tmp[0].host
         else:
             self.device = Roku(roku_device_ip)
+            try:
+                self.device.home()
+            except:
+                raise ValueError('You need to provide a Roku device IP')
         print("connected to ROKU device on: " + roku_device_ip)
         self.roku_device_ip = roku_device_ip
         self.apps = {}

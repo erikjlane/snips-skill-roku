@@ -20,7 +20,6 @@ roku_ip = config_s.get("roku_device_ip")
 roku_player = None
 try:
     roku_player = SnipsRoku(roku_device_ip=roku_ip)
-    roku_player.device.home()
 except:
     print("fail to connect to ROKU")
     sys.exit(1)
