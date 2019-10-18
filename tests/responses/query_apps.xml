@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<apps>
+	<app id="12" subtype="ndka" type="appl" version="4.2.81118042">Netflix</app>
+	<app id="13" subtype="ndka" type="appl" version="11.0.2019090617">Prime Video</app>
+	<app id="2285" subtype="sdka" type="appl" version="4.9.3">Hulu</app>
+	<app id="151908" subtype="rsga" type="appl" version="2.5.19">The Roku Channel</app>
+	<app id="50025" subtype="rsga" type="appl" version="2.0.20190905">Google Play Movies &amp; TV</app>
+	<app id="27536" subtype="rsga" type="appl" version="4.18.2">CBS News</app>
+	<app id="2213" subtype="sdka" type="appl" version="4.2.1655">Roku Media Player</app>
+	<app id="9581" subtype="rsga" type="appl" version="2.5.6">NBC News</app>
+	<app id="54065" subtype="rsga" type="appl" version="2.2.1051">ABC News</app>
+	<app id="837" subtype="ndka" type="appl" version="1.0.80000286">YouTube</app>
+	<app id="195316" subtype="ndka" type="appl" version="1.0.80000001">YouTube TV</app>
+	<app id="97977" subtype="rsga" type="appl" version="1.2.1">Al Jazeera</app>
+	<app id="222642" subtype="rsga" type="appl" version="1.0.0">myTuner Radio</app>
+	<app id="19977" subtype="ndka" type="appl" version="2.7.16">Spotify Music</app>
+	<app id="4070" subtype="rsga" type="appl" version="4.1.6">TED</app>
+</apps>
