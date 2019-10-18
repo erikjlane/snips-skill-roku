@@ -10,6 +10,7 @@ class SnipsRoku:
     def __init__(self, roku_device_ip=None):
         if roku_device_ip is None:
             devices = Roku.discover()
+            self.device = None
             for device in devices:
                 try:
                     device.home()
