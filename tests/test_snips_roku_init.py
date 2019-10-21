@@ -3,6 +3,14 @@ import mock
 import roku
 from snipsroku.snipsroku import SnipsRoku
 
+@pytest.fixture(scope="module")
+def mqtt_server():
+    print("Starting MQTT Server")
+    mqtt_server = subprocess.Popen("mosquitto")
+    time.sleep(1)  # Let's wait a bit before it's started
+    yield mqtt_server
+    print("Tearing down MQTT Server")
+    mqtt_server.kill()
 def test_no_roku_connected_without_ip():
     with mock.patch('roku.Roku.discover', return_value=None):
         with pytest.raises(Exception):
