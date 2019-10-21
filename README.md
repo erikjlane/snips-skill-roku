@@ -1,3 +1,4 @@
+version 0.2.0
 # Snips Skill Roku
 
 [![Latest Version](https://img.shields.io/pypi/v/snipsroku.svg)](https://pypi.python.org/pypi/snipsroku/)
@@ -9,46 +10,23 @@ Note: Roku Search is only available in English, and only available for registere
 
 ## Snips Manager
 
-It is recommended that you use this skill with the [Snips Manager](https://github.com/snipsco/snipsmanager). Simply add the following section to your [Snipsfile](https://github.com/snipsco/snipsmanager/wiki/The-Snipsfile):
-
-~~~yaml
-  skills:
-    - pip: https://github.com/snipsco/snips-skills-roku
-      package_name: snipsroku
-      params:
-        roku_device_ip: <ROKU_DEVICE_IP>
-~~~
+It is recommended that you use this skill with the [snips skill server]().
 
 ## Usage
 
 The skill allows you to control [Roku](https://www.roku.com/) TV. You can use it as follows:
+ - Go to home screen
+ - Get dict with installed apps and apps id
+ - Launch a specifc app already installed
+ - Search for content
+ - Launch a specific series or movie. For instance, Black Mirror season 4
 
-~~~python
-    from snipsroku.snipsroku import SnipsRoku
-
-
-    roku = SnipsRoku(<ROKU_DEVICE_IP>)
-    # Go to home screen
-    roku.home_screen()
-
-    # Get dict with installed apps and apps id
-    roku.get_apps()
-
-    # Launch a specifc app already installed
-    id = roku.get_app_id("Youtube")
-    roku.launch_app(id)
-
-    # Search for content
-    roku.search_content("tv-show", "Friends")
-
-    # Launch a specific series or movie. For instance, Black Mirror season 4
-    roku.search_content("tv-show", "Black Mirror", None, True, "Netflix", 4)
-~~~
-
+### Configuration
 
 The `ROKU_DEVICE_IP` is used to identify your Roku device in the network. You can either obtain the IP through the Roku interface
 if you navigate to **Settings > Network > About** and note down what is next to "IP address". Alternatively, please follow the instructions
  [here](https://sdkdocs.roku.com/display/sdkdoc/External+Control+API#ExternalControlAPI-SSDP(SimpleServiceDiscoveryProtocol)).
+If this configuration is not set, the app will search your network for a Roku devices.
 
 ## Contributing
 
