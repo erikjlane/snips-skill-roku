@@ -31,9 +31,4 @@ except:
 clientLocal = ClientMPU(MQTT_ADDR_LOCAL, lang_config, roku_player)
 
 if __name__ == "__main__":
-    try:
-        clientLocal.start()
-        while True:
-            pass
-    except KeyboardInterrupt:
-        print("Please force to kill this process!")
+        clientLocal.start(loop=True)

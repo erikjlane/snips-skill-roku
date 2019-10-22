@@ -29,12 +29,13 @@ def is_simple_intent_callback(_func):
         return decorator_check
     return decorator_check(_func)
 
-class ClientAction(threading.Thread):
+class ClientAction():
 
     def __init__(self, mqtt_addr, lang_config):
         threading.Thread.__init__(self)
         self.__mqtt_addr = mqtt_addr
         self.config = lang_config
+        self.intent_funcs = []
     
     def extract_defaults(self, intent_message, slot_name):
             result = []
@@ -68,19 +69,21 @@ class ClientAction(threading.Thread):
             return None
         return res[0]
     
-    def run(self):
-        while 1:
-            try:
-                with Hermes(self.__mqtt_addr) as h:
-                    for i in self.intent_funcs:
-                        for name in self.config.intents.get_intent(i[1]):
-                            h.subscribe_intent(name, i[0])
-                            print("subscribe to {}".format(name))
-                    for site_id in ["default", "cortex_00_2", "cortex_40_2"]:
-                        h.publish_start_session_notification(site_id,
-                                self.config.tts.get_value("Ready"), None)
-                    print("connected to: {}".format(self.__mqtt_addr))
-                    h.start()
-            except LibException:
-                print("could not connect to broker: {}".format(self.__mqtt_addr))
-                time.sleep(60)
+    def start(self, loop=False):
+        try:
+            with Hermes(self.__mqtt_addr) as h:
+                print("connected to: {}".format(self.__mqtt_addr))
+                for i in self.intent_funcs:
+                    for name in self.config.intents.get_intent(i[1]):
+                        h.subscribe_intent(name, i[0])
+                        print("subscribe to {}".format(name))
+                for site_id in ["default"]:
+                    h.publish_start_session_notification(site_id,
+                            self.config.tts.get_value("Ready"), None)
+                if (loop):
+                    h.loop_forever()
+                else:
+                    h.loop_start()
+        except LibException:
+            print("could not connect to broker: {}".format(self.__mqtt_addr))
+            time.sleep(60)

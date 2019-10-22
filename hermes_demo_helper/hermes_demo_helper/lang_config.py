@@ -5,16 +5,15 @@ from .config import Config
 import json
 
 class Lang_config:
-    def __init__(self, dir_path):
-        DEFAULT_PATH = '{}/{}.json'
+    def __init__(self, dir_path, lang='en'):
         ASSISTANT = '/var/lib/snips/assistant/assistant.json'
-        lang = 'en'
         try:
             with open(ASSISTANT, encoding='utf-8') as f:
                 data = json.load(f)
-                lang = json.get('language', 'en')
+                lang = json.get('language', lang)
         except :
             pass
+        DEFAULT_PATH = '{}/{}.json'
         try:
             path = DEFAULT_PATH.format(dir_path, lang)
             with open(path) as f:
