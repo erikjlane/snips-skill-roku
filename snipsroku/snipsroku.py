@@ -1,9 +1,11 @@
 #!/usr/local/bin/python
 # -*-: coding utf-8 -*-
-import requests
 import re
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as eT
+
+import requests
 from roku import Roku
+
 
 class SnipsRoku:
 
@@ -36,7 +38,7 @@ class SnipsRoku:
         r = requests.get(
             "http://{}:8060/query/apps".format(self.roku_device_ip))
 
-        parsed_data = ET.fromstring(r.content)
+        parsed_data = eT.fromstring(r.content)
         apps_array = []
         for app in parsed_data:
             self.apps[app.text.lower()] = app.attrib['id']
@@ -58,7 +60,12 @@ class SnipsRoku:
         self.set_available_apps()
         return self.apps.get(app_name.lower())
 
-    def search_content(self, content_type, keyword=None, title=None, launch=False, provider=None,
+    def search_content(self,
+                       content_type,
+                       keyword=None,
+                       title=None,
+                       launch=False,
+                       provider=None,
                        season=None):
         """
         :param content_type: tv-show, movie, persona, channel or game
@@ -71,14 +78,17 @@ class SnipsRoku:
         """
         self._is_playing = True
         
-        payload = {'type': content_type, 'launch': SnipsRoku.bool2string(launch),
-                                               'season': SnipsRoku.parse_season(season)}
+        payload = {
+            'type': content_type,
+            'launch': SnipsRoku.bool2string(launch),
+            'season': SnipsRoku.parse_season(season)
+        }
 
         # when launching pick the first content and provider available if not specified
         if launch:
             payload['match-any'] = 'true'
             if provider is None:
-            # we call set_available_apps every time just in case new apps have been installed
+                # we call set_available_apps every time just in case new apps have been installed
                 self.set_available_apps()
                 payload['provider'] = self.apps_string_list
             else:
@@ -91,7 +101,9 @@ class SnipsRoku:
         else:
             raise ValueError('Either keyword or title need to be specified')
         requests.post(
-            "http://{}:8060/search/browse?".format(self.roku_device_ip), params=payload)
+            "http://{}:8060/search/browse?".format(self.roku_device_ip),
+            params=payload
+        )
 
     def play(self):
         if self._is_playing:
@@ -117,9 +129,9 @@ class SnipsRoku:
         :param season_string:
         :return: integer
         """
-        if(season_string is None):
+        if season_string is None:
             return None
-        p = re.compile('\d+')
+        p = re.compile(r'\d+')
         match = p.findall(season_string)
         if match:
             return int(match[0])

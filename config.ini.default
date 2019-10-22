@@ -1,7 +1,7 @@
 [global]
 addr_local_host=localhost
 addr_local_port=1883
-ressources=ressources
+resources=resources
 
 [secret]
 roku_device_ip=
