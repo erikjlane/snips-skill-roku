@@ -69,12 +69,11 @@ class init_app:
 
     def __enter__(self):
         print("mqtt addr")
-        print(self.client._ClientAction__mqtt_addr)
         self.h = Hermes(self.client._ClientAction__mqtt_addr)
         self.h.connect()
-        for i in self.client.intent_funcs:
-            for name in self.client.config.intents.get_intent(i[1]):
-                self.h.subscribe_intent(name, i[0])
+        self.h.subscribe_intents(self.client.handler)
+        self.h.subscribe_session_ended(self.client.end_session_handler)
+        self.h.subscribe_intent_not_recognized(self.client.not_recognized_function)
         self.h.loop_start()
         time.sleep(0.1)
         return self.client
@@ -88,7 +87,7 @@ class init_app:
 
 def test_intent_go_home(requests_mock, mqtt_server):
     payload = create_intent("go_home_intent.json")
-    with init_app(requests_mock, mqtt_server) as client:
+    with init_app(requests_mock, mqtt_server):
         single("hermes/intent/snips-demo:goHome",
                payload=payload,
                port=mqtt_server[0])
@@ -102,7 +101,7 @@ def test_intent_launch_app(requests_mock, mqtt_server):
     requests_mock.get('http://localhost:8060/query/apps',
                       text=load_query_response('query_apps.xml'))
     requests_mock.post(post_addr, text='')
-    with init_app(requests_mock, mqtt_server) as client:
+    with init_app(requests_mock, mqtt_server):
         single("hermes/intent/snips-demo:launchApp",
                payload=payload,
                port=mqtt_server[0])
@@ -115,7 +114,7 @@ def test_intent_search_action_movies(requests_mock, mqtt_server):
     requests_mock.post(post_addr, text='')
     requests_mock.get('http://localhost:8060/query/apps',
                       text=load_query_response('query_apps.xml'))
-    with init_app(requests_mock, mqtt_server) as client:
+    with init_app(requests_mock, mqtt_server):
         payload = create_intent("search_action_movies_intent.json")
         single("hermes/intent/snips-demo:searchContent",
                payload=payload,
@@ -141,7 +140,7 @@ def test_intent_play_black_mirror_netflix_season1(requests_mock, mqtt_server):
     post_addr = 'http://localhost:8060/search/browse'
     requests_mock.get('http://localhost:8060/query/apps', text=response)
     requests_mock.post(post_addr, text='')
-    with init_app(requests_mock, mqtt_server) as client:
+    with init_app(requests_mock, mqtt_server):
         payload = create_intent("play_black_mirror_Netflix_season1_intent.json")
         single("hermes/intent/snips-demo:playContent", payload = payload, port=mqtt_server[0])
     assert requests_mock.last_request.path in post_addr
@@ -162,7 +161,7 @@ def test_intent_play_then_pause(requests_mock, mqtt_server):
     requests_mock.get('http://localhost:8060/query/apps', text=response)
     requests_mock.post('http://localhost:8060/keypress/Play', text='')
     requests_mock.post(post_addr, text='')
-    with init_app(requests_mock, mqtt_server) as client:
+    with init_app(requests_mock, mqtt_server):
         single("hermes/intent/snips-demo:playContent", payload=payload, port=mqtt_server[0])
         time.sleep(0.5)
         assert requests_mock.last_request.path in post_addr
@@ -186,7 +185,7 @@ def test_intent_play_then_pause_then_play(requests_mock, mqtt_server):
     requests_mock.get('http://localhost:8060/query/apps', text=response)
     requests_mock.post('http://localhost:8060/keypress/Play', text='')
     requests_mock.post(post_addr, text='')
-    with init_app(requests_mock, mqtt_server) as client:
+    with init_app(requests_mock, mqtt_server):
         single("hermes/intent/snips-demo:playContent",
                payload=payload,
                port=mqtt_server[0])

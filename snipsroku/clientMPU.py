@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 # -*-: coding utf-8 -*-
 
-from hermes_demo_helper.hermes_demo_helper import *
+from hermes_demo_helper.hermes_demo_helper import ClientAction
+from hermes_demo_helper.hermes_demo_helper import is_simple_intent_callback
+
 
 
 class ClientMPU(ClientAction):
     def __init__(self, mqtt_addr, lang_config, roku_player):
         ClientAction.__init__(self, mqtt_addr, lang_config)
         # init intent subscribe
-        self.intent_funcs = [
+        intent_funcs = [
             (self.play_content, "play_content"),
             (self.search_content, "search_content"),
             (self.go_home, "go_home"),
@@ -16,6 +18,8 @@ class ClientMPU(ClientAction):
             (self.tv_play, "tv_play"),
             (self.tv_pause, "tv_pause")
         ]
+        for intent_func in intent_funcs:
+            self.register_handler(intent_func[0],intent_func[1])
         self.roku_player = roku_player
 
     @is_simple_intent_callback
@@ -31,7 +35,7 @@ class ClientMPU(ClientAction):
                                             provider=media_provider,
                                             season=season)
         except ValueError as e:
-            return e.message
+            return e
         return ""
 
     @is_simple_intent_callback
