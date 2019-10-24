@@ -10,6 +10,8 @@ from hermes_python.ontology.feedback import SiteMessage
 import time
 import threading
 
+from .snipsConfig import Snips_config
+
 def is_simple_intent_callback(_func):
     def decorator_check(func):
         @functools.wraps(func)
@@ -103,7 +105,7 @@ class ClientAction():
         self.config = lang_config
         self.default_intents = {}
         self.continue_session_ids = {}
-        self.default_sound_feedback = False
+        self.default_sound_feedback = Snips_config.get_default_enable_feedback()
 
     def run_not_recognized_time(self, hermes, session_id):
         if session_id not in self.continue_session_ids:
