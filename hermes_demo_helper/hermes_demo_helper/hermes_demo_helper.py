@@ -66,11 +66,12 @@ class ContinueObject():
         self.intent_funcs = intent_funcs
         self.tts = tts
         self.not_recognized_func = not_recognized_func
-        self.nb = nb
         self.nb_second = nb_second
         self.sound_feedback = sound_feedback
-        self.max_time = 0
-    
+        if nb_second != -1:
+            nb = -1
+        self.nb = nb
+
     def send_intent_not_regognized(self):
         return self.nb == 0 \
             or self.nb_second != -1 \
@@ -89,8 +90,8 @@ class ContinueObject():
     def continue_session(self):
             if (self.nb == 0):
                 return False
-            if (False): #diff current time
-                pass
+            if (self.nb == -1): #diff current time
+                return True
             self.nb -= 1
             return True
 
@@ -102,7 +103,7 @@ class ClientAction():
         self.config = lang_config
         self.default_intents = {}
         self.continue_session_ids = {}
-        self.default_sound_feedback = True
+        self.default_sound_feedback = False
 
     def run_not_recognized_time(self, hermes, session_id):
         if session_id not in self.continue_session_ids:
@@ -145,6 +146,8 @@ class ClientAction():
             )
         elif continue_obj.not_recognized_func is not None:
             hermes.publish_end_session(message.session_id, continue_obj.not_recognized_func(hermes, message))
+        else:
+            hermes.publish_end_session(message.session_id, "")
 
     def end_session_handler(self, hermes, message):
         continue_obj = self.continue_session_ids.pop(message.session_id, None)
