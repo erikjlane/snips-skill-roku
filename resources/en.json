@@ -8,7 +8,7 @@
 			"tv_pause" : "snips-demo:tvPause",
 			"launch_app" : "snips-demo:launchApp",
 			"go_home" : "snips-demo:goHome",
-			"tv_play" : "snips-demo:tvPlay",
+			"tv_play" : "snips-demo:tvResume",
 			"tv_reverse" : "snips-demo:tvReverse",
 			"tv_forward" : "snips-demo:tvForward"
 		},

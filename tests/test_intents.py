@@ -120,7 +120,7 @@ def test_intent_tv_forward_play(requests_mock, mqtt_server):
         assert requests_mock.call_count == 2
         requests_mock.post('http://localhost:8060/keypress/play', text='')
         payload, site_id, session_id = create_intent("tv_play_intent.json", site_id, session_id)
-        single("hermes/intent/snips-demo:tvPlay",
+        single("hermes/intent/snips-demo:tvResume",
                payload=payload,
                port=mqtt_server[0])
         time.sleep(0.1)
@@ -142,7 +142,7 @@ def test_intent_tv_forward_play_wait(requests_mock, mqtt_server):
         assert requests_mock.call_count == 2
         requests_mock.post('http://localhost:8060/keypress/play', text='')
         payload, site_id, session_id = create_intent("tv_play_intent.json", site_id, session_id)
-        single("hermes/intent/snips-demo:tvPlay",
+        single("hermes/intent/snips-demo:tvResume",
                payload=payload,
                port=mqtt_server[0])
         time.sleep(0.1)
@@ -259,7 +259,7 @@ def test_intent_play_then_pause_then_play(requests_mock, mqtt_server):
         nb_called = requests_mock.call_count
         assert requests_mock.last_request.path in  'http://localhost:8086/keypress/play'
         payload, site_id, session_id = create_intent("tv_play_intent.json")
-        single("hermes/intent/snips-demo:tvPlay",
+        single("hermes/intent/snips-demo:tvResume",
                payload=payload,
                port=mqtt_server[0])
     assert nb_called + 1 == requests_mock.call_count

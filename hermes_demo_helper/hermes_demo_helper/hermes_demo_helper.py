@@ -147,13 +147,13 @@ class ClientAction():
             hermes.publish_end_session(message.session_id, continue_obj.not_recognized_func(hermes, message))
 
     def end_session_handler(self, hermes, message):
-        continue_obj = self.continue_session_ids.pop(message.session_id)
+        continue_obj = self.continue_session_ids.pop(message.session_id, None)
         if continue_obj is None:
             return
         if self.default_sound_feedback:
-            hermes.enable_sound_feeback(message.site_id)
+            hermes.enable_sound_feedback(SiteMessage(message.site_id))
         else:
-            hermes.enable_sound_feeback(message.site_id)
+            hermes.enable_sound_feedback(SiteMessage(message.site_id))
         
     
     def extract_defaults(self, intent_message, slot_name):
