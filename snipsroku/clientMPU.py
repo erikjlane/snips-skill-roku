@@ -3,6 +3,8 @@
 
 from hermes_demo_helper.hermes_demo_helper import ClientAction
 from hermes_demo_helper.hermes_demo_helper import is_simple_intent_callback
+from hermes_demo_helper.hermes_demo_helper import is_continue_intent_callback
+from hermes_demo_helper.hermes_demo_helper import ContinueObject
 
 
 
@@ -16,7 +18,9 @@ class ClientMPU(ClientAction):
             (self.go_home, "go_home"),
             (self.launch_app, "launch_app"),
             (self.tv_play, "tv_play"),
-            (self.tv_pause, "tv_pause")
+            (self.tv_pause, "tv_pause"),
+            (self.tv_reverse, "tv_reverse"),
+            (self.tv_forward, "tv_forward")
         ]
         for intent_func in intent_funcs:
             self.register_handler(intent_func[0],intent_func[1])
@@ -66,3 +70,26 @@ class ClientMPU(ClientAction):
     def tv_pause(self, hermes, intent_message):
         self.roku_player.pause()
         return ""
+
+    @is_continue_intent_callback
+    def tv_forward(self, hermes, intent_message):
+        self.roku_player.forward()
+        return ContinueObject(
+            {"tv_play": self.tv_play},
+            "",
+            self.not_recognized_func,
+            nb_second=10,
+            sound_feedback=False)
+
+    @is_continue_intent_callback
+    def tv_reverse(self, hermes, intent_message):
+        self.roku_player.reverse()
+        return ContinueObject(
+            {"tv_play": self.tv_play},
+            "",
+            self.not_recognized_func,
+            nb_second=10,
+            sound_feedback=False)
+    
+    def not_recognized_func(self, hermes, message):
+        self.roku_player.play()

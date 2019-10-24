@@ -120,6 +120,12 @@ class SnipsRoku:
     def home_screen(self):
         self._is_playing = False
         self.device.home()
+    
+    def reverse(self):
+        self.device.reverse()
+
+    def forward(self):
+        self.device.forward()
 
     @staticmethod
     def parse_season(season_string):

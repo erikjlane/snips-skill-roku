@@ -48,8 +48,8 @@ def create_intent(filename, site_id='default', session_id=None):
         data = json.load(f)
         data['siteId'] = site_id
         data['sessionId'] = session_id
-        return json.dumps(data)
-    return '{}'
+        return (json.dumps(data), site_id, session_id)
+    return ('{}', site_id, session_id)
 
 
 def load_query_response(filename):
@@ -86,7 +86,7 @@ class init_app:
 
 
 def test_intent_go_home(requests_mock, mqtt_server):
-    payload = create_intent("go_home_intent.json")
+    payload, site_id, session_id = create_intent("go_home_intent.json")
     with init_app(requests_mock, mqtt_server):
         single("hermes/intent/snips-demo:goHome",
                payload=payload,
@@ -94,9 +94,68 @@ def test_intent_go_home(requests_mock, mqtt_server):
         time.sleep(0.1)
     assert requests_mock.call_count == 2
 
+def test_intent_tv_forward(requests_mock, mqtt_server):
+    payload, site_id, session_id = create_intent("tv_forward_intent.json")
+    requests_mock.post("http://localhost:8060/keypress/Fwd", text="OK")
+    with init_app(requests_mock, mqtt_server):
+        single("hermes/intent/snips-demo:tvForward",
+               payload=payload,
+               port=mqtt_server[0])
+        time.sleep(0.1)
+        assert requests_mock.call_count == 2
+        requests_mock.post('http://localhost:8060/keypress/play', text='')
+        # TODO add not recognized
+        time.sleep(15)
+    assert requests_mock.call_count == 3
+    assert requests_mock.last_request.path in 'http://localhost:8060/keypress/play'
+
+def test_intent_tv_forward_play(requests_mock, mqtt_server):
+    payload, site_id, session_id = create_intent("tv_forward_intent.json")
+    requests_mock.post("http://localhost:8060/keypress/Fwd", text="OK")
+    with init_app(requests_mock, mqtt_server):
+        single("hermes/intent/snips-demo:tvForward",
+               payload=payload,
+               port=mqtt_server[0])
+        time.sleep(0.1)
+        assert requests_mock.call_count == 2
+        requests_mock.post('http://localhost:8060/keypress/play', text='')
+        payload, site_id, session_id = create_intent("tv_play_intent.json", site_id, session_id)
+        single("hermes/intent/snips-demo:tvPlay",
+               payload=payload,
+               port=mqtt_server[0])
+        time.sleep(0.1)
+        payload, site_id, session_id = create_intent("end_session_nominal.json", site_id, session_id)
+        single("hermes/dialogueManager/sessionEnded",
+               payload=payload,
+               port=mqtt_server[0])
+    assert requests_mock.call_count == 3
+    assert requests_mock.last_request.path in 'http://localhost:8060/keypress/play'
+
+def test_intent_tv_forward_play_wait(requests_mock, mqtt_server):
+    payload, site_id, session_id = create_intent("tv_forward_intent.json")
+    requests_mock.post("http://localhost:8060/keypress/Fwd", text="OK")
+    with init_app(requests_mock, mqtt_server):
+        single("hermes/intent/snips-demo:tvForward",
+               payload=payload,
+               port=mqtt_server[0])
+        time.sleep(0.1)
+        assert requests_mock.call_count == 2
+        requests_mock.post('http://localhost:8060/keypress/play', text='')
+        payload, site_id, session_id = create_intent("tv_play_intent.json", site_id, session_id)
+        single("hermes/intent/snips-demo:tvPlay",
+               payload=payload,
+               port=mqtt_server[0])
+        time.sleep(0.1)
+        payload, site_id, session_id = create_intent("end_session_nominal.json", site_id, session_id)
+        single("hermes/dialogueManager/sessionEnded",
+               payload=payload,
+               port=mqtt_server[0])
+        time.sleep(15)
+    assert requests_mock.call_count == 3
+    assert requests_mock.last_request.path in 'http://localhost:8060/keypress/play'
 
 def test_intent_launch_app(requests_mock, mqtt_server):
-    payload = create_intent("launch_netflix_intent.json")
+    payload, site_id, session_id = create_intent("launch_netflix_intent.json")
     post_addr = 'http://localhost:8060/launch/12'
     requests_mock.get('http://localhost:8060/query/apps',
                       text=load_query_response('query_apps.xml'))
@@ -115,7 +174,7 @@ def test_intent_search_action_movies(requests_mock, mqtt_server):
     requests_mock.get('http://localhost:8060/query/apps',
                       text=load_query_response('query_apps.xml'))
     with init_app(requests_mock, mqtt_server):
-        payload = create_intent("search_action_movies_intent.json")
+        payload, site_id, session_id = create_intent("search_action_movies_intent.json")
         single("hermes/intent/snips-demo:searchContent",
                payload=payload,
                port=mqtt_server[0])
@@ -141,7 +200,7 @@ def test_intent_play_black_mirror_netflix_season1(requests_mock, mqtt_server):
     requests_mock.get('http://localhost:8060/query/apps', text=response)
     requests_mock.post(post_addr, text='')
     with init_app(requests_mock, mqtt_server):
-        payload = create_intent("play_black_mirror_Netflix_season1_intent.json")
+        payload, site_id, session_id = create_intent("play_black_mirror_Netflix_season1_intent.json")
         single("hermes/intent/snips-demo:playContent", payload = payload, port=mqtt_server[0])
     assert requests_mock.last_request.path in post_addr
     assert query == dict(urllib.parse.parse_qsl(requests_mock.last_request.query))
@@ -155,7 +214,7 @@ def test_intent_play_then_pause(requests_mock, mqtt_server):
         'match-any': 'true',
         'season': '1'
     }
-    payload = create_intent("play_black_mirror_Netflix_season1_intent.json")
+    payload, site_id, session_id = create_intent("play_black_mirror_Netflix_season1_intent.json")
     response = load_query_response('query_apps.xml')
     post_addr = 'http://localhost:8060/search/browse'
     requests_mock.get('http://localhost:8060/query/apps', text=response)
@@ -166,7 +225,7 @@ def test_intent_play_then_pause(requests_mock, mqtt_server):
         time.sleep(0.5)
         assert requests_mock.last_request.path in post_addr
         assert query == dict(urllib.parse.parse_qsl(requests_mock.last_request.query))
-        payload = create_intent("tv_pause_intent.json")
+        payload, site_id, session_id = create_intent("tv_pause_intent.json")
         single("hermes/intent/snips-demo:tvPause", payload=payload, port=mqtt_server[0])
     assert requests_mock.last_request.path in  'http://localhost:8086/keypress/play'
 
@@ -179,7 +238,7 @@ def test_intent_play_then_pause_then_play(requests_mock, mqtt_server):
         'match-any': 'true',
         'season': '1'
     }
-    payload = create_intent("play_black_mirror_Netflix_season1_intent.json")
+    payload, site_id, session_id = create_intent("play_black_mirror_Netflix_season1_intent.json")
     response = load_query_response('query_apps.xml')
     post_addr = 'http://localhost:8060/search/browse'
     requests_mock.get('http://localhost:8060/query/apps', text=response)
@@ -192,14 +251,14 @@ def test_intent_play_then_pause_then_play(requests_mock, mqtt_server):
         time.sleep(0.5)
         assert requests_mock.last_request.path in post_addr
         assert query == dict(urllib.parse.parse_qsl(requests_mock.last_request.query))
-        payload = create_intent("tv_pause_intent.json")
+        payload, site_id, session_id = create_intent("tv_pause_intent.json")
         single("hermes/intent/snips-demo:tvPause",
                payload=payload,
                port=mqtt_server[0])
         time.sleep(0.5)
         nb_called = requests_mock.call_count
         assert requests_mock.last_request.path in  'http://localhost:8086/keypress/play'
-        payload = create_intent("tv_play_intent.json")
+        payload, site_id, session_id = create_intent("tv_play_intent.json")
         single("hermes/intent/snips-demo:tvPlay",
                payload=payload,
                port=mqtt_server[0])

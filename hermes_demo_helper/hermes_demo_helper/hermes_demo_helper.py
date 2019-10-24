@@ -6,7 +6,9 @@ import functools
 import threading
 from hermes_python.ffi import LibException
 from hermes_python.hermes import Hermes
+from hermes_python.ontology.feedback import SiteMessage
 import time
+import threading
 
 def is_simple_intent_callback(_func):
     def decorator_check(func):
@@ -27,39 +29,6 @@ def is_simple_intent_callback(_func):
         return decorator_check
     return decorator_check(_func)
 
-class ContinueObject():
-    def __init__(self, intent_funcs, tts, not_recognized_func=None, nb=0,nb_second=-1,sound_feedback = True):
-        self.handlers = {}
-        self.intent_funcs = intent_funcs
-        self.tts = tts,
-        self.not_recognized_func = not_recognized_func
-        self.nb = nb
-        self.nb_second = nb_second
-        self.sound_feedback = sound_feedback
-        self.max_time = 0
-    
-    def send_intent_not_regognized(self):
-        return self.nb == 0 \
-            or self.nb_second != -1 \
-            or self.not_recognized_func is not None
-    
-    def _create_handlers(self, config):
-        for key,val in self.intent_funcs.items():
-            self.handlers[config.intents.get_intent(key)] = val
-
-    def get_intents(self, config):
-        return list(self.intent_funcs.keys.map(
-            lambda key: config.intents.get_intent(key)))
-    
-    def continue_session(self):
-            if (self.nb == 0):
-                return False
-            if (False): #diff current time
-                pass
-            self.nb -= 1
-            return True
-
-
 def is_continue_intent_callback(_func):
     def decorator_check(func):
         @functools.wraps(func)
@@ -76,11 +45,11 @@ def is_continue_intent_callback(_func):
             else:
                 continueObject = func(self, hermes, intent_message)
                 continueObject._create_handlers(self.config)
-                self.save_continue_object(intent_message.session_id, continueObject)
+                self.save_continue_object(intent_message.session_id, continueObject, hermes)
                 if continueObject.sound_feedback:
-                    hermes.enable_sound_feeback(intent_message.site_id)
+                    hermes.enable_sound_feedback(SiteMessage(intent_message.site_id))
                 else:
-                    hermes.enable_sound_feeback(intent_message.site_id)
+                    hermes.disable_sound_feedback(SiteMessage(intent_message.site_id))
                 hermes.publish_continue_session(intent_message.session_id,
                     continueObject.tts,
                     send_intent_not_recognized = continueObject.send_intent_not_regognized(),
@@ -90,6 +59,40 @@ def is_continue_intent_callback(_func):
     if _func is None:
         return decorator_check
     return decorator_check(_func)
+
+class ContinueObject():
+    def __init__(self, intent_funcs, tts, not_recognized_func=None, nb=0,nb_second=-1,sound_feedback = True):
+        self.handlers = {}
+        self.intent_funcs = intent_funcs
+        self.tts = tts
+        self.not_recognized_func = not_recognized_func
+        self.nb = nb
+        self.nb_second = nb_second
+        self.sound_feedback = sound_feedback
+        self.max_time = 0
+    
+    def send_intent_not_regognized(self):
+        return self.nb == 0 \
+            or self.nb_second != -1 \
+            or self.not_recognized_func is not None
+    
+    def _create_handlers(self, config):
+        for key,val in self.intent_funcs.items():
+            self.handlers[config.intents.get_intent(key)[0]] = val
+
+    def get_intents(self, config= None):
+        if config is None:
+            return self.handlers.keys()
+        return list(self.intent_funcs.keys.map(
+            lambda key: config.intents.get_intent(key)))
+    
+    def continue_session(self):
+            if (self.nb == 0):
+                return False
+            if (False): #diff current time
+                pass
+            self.nb -= 1
+            return True
 
 class ClientAction():
 
@@ -101,8 +104,20 @@ class ClientAction():
         self.continue_session_ids = {}
         self.default_sound_feedback = True
 
-    def save_continue_object(self, session_id, obj):
+    def run_not_recognized_time(self, hermes, session_id):
+        if session_id not in self.continue_session_ids:
+            return
+        obj = self.continue_session_ids[session_id]
+        hermes.publish_end_session(session_id, obj.not_recognized_func(hermes, None))
+
+    def save_continue_object(self, session_id, obj, hermes):
         self.continue_session_ids[session_id] = obj
+        if obj.nb_second <= -1:
+            return
+        threading.Timer(obj.nb_second,
+            self.run_not_recognized_time,
+            args=(hermes, session_id)
+        ).start()
 
     def register_handler(self, func, config_intent_name):
         for name in self.config.intents.get_intent(config_intent_name):
@@ -111,7 +126,7 @@ class ClientAction():
     def handler(self, hermes, intent_message):
         if intent_message.session_id in self.continue_session_ids:
             func = self.continue_session_ids[intent_message.session_id]\
-                .handlers(intent_message.intent.intent_name)
+                .handlers[intent_message.intent.intent_name]
             func(hermes, intent_message)
         elif  intent_message.intent.intent_name in self.default_intents:
             func = self.default_intents[intent_message.intent.intent_name]
@@ -129,9 +144,8 @@ class ClientAction():
                 intent_filter = continue_obj.get_intents()
             )
         elif continue_obj.not_recognized_func is not None:
-            continue_obj.not_recognized_func(hermes, message)
+            hermes.publish_end_session(message.session_id, continue_obj.not_recognized_func(hermes, message))
 
-    
     def end_session_handler(self, hermes, message):
         continue_obj = self.continue_session_ids.pop(message.session_id)
         if continue_obj is None:
