@@ -1,95 +1,66 @@
-#!/usr/bin/env python3
-# -*-: coding utf-8 -*-
 
-from hermes_demo_helper.hermes_demo_helper import ClientAction
-from hermes_demo_helper.hermes_demo_helper import is_simple_intent_callback
-from hermes_demo_helper.hermes_demo_helper import is_continue_intent_callback
-from hermes_demo_helper.hermes_demo_helper import ContinueObject
+from hermes_demo_helper.hermes_demo_helper import SnipsFlow, ContinueObject
+flow = SnipsFlow()
 
+@flow.intent("play_content", "media_provider", "season", "media_content", "roku_player")
+def play_content(media_provider, season, media_content, roku_player):
+    try:
+        roku_player.search_content(content_type=None,
+                                        keyword=media_content,
+                                        title=None,
+                                        launch=True,
+                                        provider=media_provider,
+                                        season=season)
+    except ValueError as e:
+        return e
+    return ""
 
+@flow.intent("search_content", "content_type", "search_keyword", "roku_player")
+def search_content(content_type, search_keyword, roku_player):
+    roku_player.search_content(content_type, search_keyword)
+    return ""
 
-class ClientMPU(ClientAction):
-    def __init__(self, mqtt_addr, lang_config, roku_player):
-        ClientAction.__init__(self, mqtt_addr, lang_config)
-        # init intent subscribe
-        intent_funcs = [
-            (self.play_content, "play_content"),
-            (self.search_content, "search_content"),
-            (self.go_home, "go_home"),
-            (self.launch_app, "launch_app"),
-            (self.tv_play, "tv_play"),
-            (self.tv_pause, "tv_pause"),
-            (self.tv_reverse, "tv_reverse"),
-            (self.tv_forward, "tv_forward")
-        ]
-        for intent_func in intent_funcs:
-            self.register_handler(intent_func[0],intent_func[1])
-        self.roku_player = roku_player
+@flow.intent("go_home", "roku_player")
+def go_home(roku_player):
+    roku_player.home_screen()
+    return ""
 
-    @is_simple_intent_callback
-    def play_content(self, hermes, intent_message):
-        media_provider = self.extract_value(intent_message, "media_provider")
-        season = self.extract_value(intent_message, "season")
-        media_content = self.extract_value(intent_message, "media_content")
-        try:
-            self.roku_player.search_content(content_type=None,
-                                            keyword=media_content,
-                                            title=None,
-                                            launch=True,
-                                            provider=media_provider,
-                                            season=season)
-        except ValueError as e:
-            return e
-        return ""
+@flow.intent("launch_app", "roku_player", "app_name")
+def launch_app(app_name, roku_player):
+    app_id = roku_player.get_app_id(app_name)
+    roku_player.launch_app(app_id)
+    return ""
 
-    @is_simple_intent_callback
-    def search_content(self, hermes, intent_message):
-        content_type = self.extract_value(intent_message, "content_type")
-        keyword = self.extract_value(intent_message, "search_keyword")
-        self.roku_player.search_content(content_type, keyword)
-        return ""
- 
-    @is_simple_intent_callback
-    def go_home(self, hermes, intent_message):
-        self.roku_player.home_screen()
-        return ""
- 
-    @is_simple_intent_callback
-    def launch_app(self, hermes, intent_message):
-        app_name = self.extract_value(intent_message, "app_name")
-        app_id = self.roku_player.get_app_id(app_name)
-        self.roku_player.launch_app(app_id)
-        return ""
-  
-    @is_simple_intent_callback
-    def tv_play(self, hermes, intent_message):
-        self.roku_player.play()
-        return ""
-    
-    @is_simple_intent_callback
-    def tv_pause(self, hermes, intent_message):
-        self.roku_player.pause()
-        return ""
+@flow.intent_on_continue("tv_play", "roku_player")
+@flow.intent("tv_play", "roku_player")
+def tv_play(roku_player):
+    roku_player.play()
+    return ""
 
-    @is_continue_intent_callback
-    def tv_forward(self, hermes, intent_message):
-        self.roku_player.forward()
-        return ContinueObject(
-            {"tv_play": self.tv_play},
-            "",
-            self.not_recognized_func,
-            nb_second=10,
-            sound_feedback=False)
+@flow.intent("tv_pause", "roku_player")
+def tv_pause(roku_player):
+    roku_player.pause()
+    return ""
 
-    @is_continue_intent_callback
-    def tv_reverse(self, hermes, intent_message):
-        self.roku_player.reverse()
-        return ContinueObject(
-            {"tv_play": self.tv_play},
-            "",
-            self.not_recognized_func,
-            nb_second=10,
-            sound_feedback=False)
-    
-    def not_recognized_func(self, hermes, message):
-        self.roku_player.play()
+@flow.intent_with_continue("tv_forward", "roku_player")
+def tv_forward(roku_player):
+    roku_player.forward()
+    return ContinueObject(
+        [tv_play],
+        "",
+        not_recognized_func,
+        nb_second=10,
+        sound_feedback=False)
+
+@flow.intent_with_continue("tv_reverse", "roku_player")
+def tv_reverse(roku_player):
+    roku_player.reverse()
+    return ContinueObject(
+        [tv_play],
+        "",
+        not_recognized_func,
+        nb_second=10,
+        sound_feedback=False)
+@flow.not_recognized("roku_player")
+def not_recognized_func(roku_player):
+    roku_player.play()

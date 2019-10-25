@@ -13,8 +13,9 @@ from hermes_python.hermes import Hermes
 from paho.mqtt.publish import single
 
 from hermes_demo_helper.lang_config import Lang_config
-from snipsroku.clientMPU import ClientMPU
+from hermes_demo_helper.hermes_demo_helper import SnipsFlow
 from snipsroku.snipsroku import SnipsRoku
+from snipsroku.clientMPU import flow
 
 
 @pytest.fixture(scope="module")
@@ -61,27 +62,23 @@ def load_query_response(filename):
 class init_app:
     def __init__(self, requests_mock, port):
         requests_mock.post('http://localhost:8060/keypress/Home', text='OK')
-        lang_config = Lang_config('resources')
         roku_player = SnipsRoku(roku_device_ip="localhost")
-        self.client = ClientMPU("0.0.0.0:{}".format(port[0]),
-                                lang_config,
-                                roku_player)
+        lang_config = Lang_config('resources')
+        flow.set_host("0.0.0.0:{}".format(port[0]))
+        flow.set_lang_config(lang_config)
+        flow.set_data(roku_player=roku_player)
+        flow.start(loop=False)
+        #time.sleep()
+        self.flow = flow
 
     def __enter__(self):
-        print("mqtt addr")
-        self.h = Hermes(self.client._ClientAction__mqtt_addr)
-        self.h.connect()
-        self.h.subscribe_intents(self.client.handler)
-        self.h.subscribe_session_ended(self.client.end_session_handler)
-        self.h.subscribe_intent_not_recognized(self.client.not_recognized_function)
-        self.h.loop_start()
         time.sleep(0.1)
-        return self.client
+        return self.flow
     
     def __exit__(self, exception_type, exception_val, trace):
         time.sleep(0.5)
         if not exception_type:
-            return self.h.disconnect()
+            return self.flow.stop()
         return False
 
 

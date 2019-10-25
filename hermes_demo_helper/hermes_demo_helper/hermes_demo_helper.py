@@ -12,60 +12,12 @@ import threading
 
 from .snipsConfig import Snips_config
 
-def is_simple_intent_callback(_func):
-    def decorator_check(func):
-        @functools.wraps(func)
-        def wrapper_check(self, hermes, intent_message):
-            confidence_score = intent_message.intent.confidence_score
-            threshold_1 = self.config.intents.get_threshold("intentBad")
-            threshold_2 = self.config.intents.get_threshold("intentGood")
-            if confidence_score <= threshold_1:
-                tts = self.config.tts.get_value("ErrorIntentGood")
-            elif confidence_score <= threshold_2:
-                tts = self.config.tts.get_value("ErrorIntentBad")
-            else:
-                tts = func(self, hermes, intent_message)
-            hermes.publish_end_session(intent_message.session_id, tts)
-        return wrapper_check
-    if _func is None:
-        return decorator_check
-    return decorator_check(_func)
 
-def is_continue_intent_callback(_func):
-    def decorator_check(func):
-        @functools.wraps(func)
-        def wrapper_check(self, hermes, intent_message):
-            confidence_score = intent_message.intent.confidence_score
-            threshold_1 = self.config.intents.get_threshold("intentBad")
-            threshold_2 = self.config.intents.get_threshold("intentGood")
-            if confidence_score <= threshold_1:
-                tts = self.config.tts.get_value("ErrorIntentGood")
-                hermes.publish_end_session(intent_message.session_id, tts)
-            elif confidence_score <= threshold_2:
-                tts = self.config.tts.get_value("ErrorIntentBad")
-                hermes.publish_end_session(intent_message.session_id, tts)
-            else:
-                continueObject = func(self, hermes, intent_message)
-                continueObject._create_handlers(self.config)
-                self.save_continue_object(intent_message.session_id, continueObject, hermes)
-                if continueObject.sound_feedback:
-                    hermes.enable_sound_feedback(SiteMessage(intent_message.site_id))
-                else:
-                    hermes.disable_sound_feedback(SiteMessage(intent_message.site_id))
-                hermes.publish_continue_session(intent_message.session_id,
-                    continueObject.tts,
-                    send_intent_not_recognized = continueObject.send_intent_not_regognized(),
-                    intent_filter = continueObject.get_intents()
-                )
-        return wrapper_check
-    if _func is None:
-        return decorator_check
-    return decorator_check(_func)
 
 class ContinueObject():
-    def __init__(self, intent_funcs, tts, not_recognized_func=None, nb=0,nb_second=-1,sound_feedback = True):
+    def __init__(self, funcs, tts, not_recognized_func=None, nb=0,nb_second=-1,sound_feedback = True):
         self.handlers = {}
-        self.intent_funcs = intent_funcs
+        self.funcs = funcs
         self.tts = tts
         self.not_recognized_func = not_recognized_func
         self.nb_second = nb_second
@@ -78,17 +30,7 @@ class ContinueObject():
         return self.nb == 0 \
             or self.nb_second != -1 \
             or self.not_recognized_func is not None
-    
-    def _create_handlers(self, config):
-        for key,val in self.intent_funcs.items():
-            self.handlers[config.intents.get_intent(key)[0]] = val
 
-    def get_intents(self, config= None):
-        if config is None:
-            return self.handlers.keys()
-        return list(self.intent_funcs.keys.map(
-            lambda key: config.intents.get_intent(key)))
-    
     def continue_session(self):
             if (self.nb == 0):
                 return False
@@ -97,21 +39,48 @@ class ContinueObject():
             self.nb -= 1
             return True
 
-class ClientAction():
+class SnipsFlow():
 
-    def __init__(self, mqtt_addr, lang_config):
-        threading.Thread.__init__(self)
-        self.__mqtt_addr = mqtt_addr
-        self.config = lang_config
+    def __init__(self):
+        self.__mqtt_addr = None
+        self.config = None
         self.default_intents = {}
         self.continue_session_ids = {}
         self.default_sound_feedback = Snips_config.get_default_enable_feedback()
+        self.data = None
+        self.default_intent_map = {}
+        self._default_intent_map = {}
+        self.continue_intent_map ={}
+        self._continue_intent_map ={}
 
-    def run_not_recognized_time(self, hermes, session_id):
-        if session_id not in self.continue_session_ids:
-            return
-        obj = self.continue_session_ids[session_id]
-        hermes.publish_end_session(session_id, obj.not_recognized_func(hermes, None))
+    def set_lang_config(self, lang_config):
+        self.config = lang_config
+        for key, f in self._default_intent_map.items():
+            for name in self.config.intents.get_intent(key):
+                self.default_intent_map[name] = f
+        for f, key in self._continue_intent_map.items():
+            for name in self.config.intents.get_intent(key):
+                self.continue_intent_map[f] = name
+
+    def set_data(self, **kwarg):
+        self.data = kwarg
+    
+    def set_host(self, host):
+        self.__mqtt_addr = host
+    
+    def slots(self, intent_message, hermes, *argv):
+        result = {}
+        for args in argv:
+            for arg in args:
+                if arg == 'hermes':
+                    result['hermes'] = hermes
+                elif arg == 'intent_message':
+                    result["intent_message"] = intent_message
+                elif arg in self.data:
+                    result[arg] = self.data[arg]
+                else:
+                    result[arg] = self.extract_value(intent_message, arg)
+        return result
 
     def save_continue_object(self, session_id, obj, hermes):
         self.continue_session_ids[session_id] = obj
@@ -122,17 +91,94 @@ class ClientAction():
             args=(hermes, session_id)
         ).start()
 
-    def register_handler(self, func, config_intent_name):
-        for name in self.config.intents.get_intent(config_intent_name):
-            self.default_intents[name] = func
+    def intent_with_continue(self, intent, *options):
+        def decorator(f):
+            def wrapper(hermes, intent_message):
+                confidence_score = intent_message.intent.confidence_score
+                threshold_1 = self.config.intents.get_threshold("intentBad")
+                threshold_2 = self.config.intents.get_threshold("intentGood")
+                if confidence_score <= threshold_1:
+                    tts = self.config.tts.get_value("ErrorIntentGood")
+                    hermes.publish_end_session(intent_message.session_id, tts)
+                elif confidence_score <= threshold_2:
+                    tts = self.config.tts.get_value("ErrorIntentBad")
+                    hermes.publish_end_session(intent_message.session_id, tts)
+                else:
+                    continueObject = f(**self.slots(intent_message, hermes, options))
+                    self.save_continue_object(intent_message.session_id, continueObject, hermes)
+                    if continueObject.sound_feedback:
+                        hermes.enable_sound_feedback(SiteMessage(intent_message.site_id))
+                    else:
+                        hermes.disable_sound_feedback(SiteMessage(intent_message.site_id))
+                    hermes.publish_continue_session(intent_message.session_id,
+                        continueObject.tts,
+                        send_intent_not_recognized = continueObject.send_intent_not_regognized(),
+                        intent_filter = self.get_intent_continue(continueObject.funcs)
+                    )
+            self._default_intent_map[intent] = wrapper
+            return wrapper
+        return decorator
+
+    def not_recognized(self, *options):
+        def decorator(f):
+            def wrapper(hermes, intent_message):
+                f(**self.slots(intent_message, hermes, options))
+            return wrapper
+        return decorator
+
+    def intent(self, intent, *options):
+        def decorator(f):
+            def wrapper(hermes, intent_message):
+                confidence_score = intent_message.intent.confidence_score
+                threshold_1 = self.config.intents.get_threshold("intentBad")
+                threshold_2 = self.config.intents.get_threshold("intentGood")
+                if confidence_score <= threshold_1:
+                    tts = self.config.tts.get_value("ErrorIntentGood")
+                elif confidence_score <= threshold_2:
+                    tts = self.config.tts.get_value("ErrorIntentBad")
+                else:
+                    tts = f(**self.slots(intent_message, hermes, options))
+                hermes.publish_end_session(intent_message.session_id, tts)
+            self._default_intent_map[intent] = wrapper
+            return wrapper
+        return decorator
+    def get_intent_continue(self, funcs):
+        result = []
+        for func in funcs:
+            if func in self.continue_intent_map:
+                result.append(self.continue_intent_map[func])
+        return result
+    def intent_on_continue(self, intent, *options):
+        def decorator(f):
+            self._continue_intent_map[f] = intent
+            def wrapper(hermes, intent_message):
+                confidence_score = intent_message.intent.confidence_score
+                threshold_1 = self.config.intents.get_threshold("intentBad")
+                threshold_2 = self.config.intents.get_threshold("intentGood")
+                if confidence_score <= threshold_1:
+                    tts = self.config.tts.get_value("ErrorIntentGood")
+                elif confidence_score <= threshold_2:
+                    tts = self.config.tts.get_value("ErrorIntentBad")
+                else:
+                    tts = f(**self.slots(intent_message, hermes, options))
+                hermes.publish_end_session(intent_message.session_id, tts)
+            return wrapper
+        return decorator
+    
+    def run_not_recognized_time(self, hermes, session_id):
+        if session_id not in self.continue_session_ids:
+            return
+        obj = self.continue_session_ids[session_id]
+        hermes.publish_end_session(session_id, obj.not_recognized_func(hermes, None))
 
     def handler(self, hermes, intent_message):
         if intent_message.session_id in self.continue_session_ids:
-            func = self.continue_session_ids[intent_message.session_id]\
-                .handlers[intent_message.intent.intent_name]
-            func(hermes, intent_message)
-        elif  intent_message.intent.intent_name in self.default_intents:
-            func = self.default_intents[intent_message.intent.intent_name]
+            funcs = self.continue_session_ids[intent_message.session_id].funcs
+            for func in funcs:
+                if func in self.continue_intent_map and intent_message.intent.intent_name == self.continue_intent_map[func]:
+                    func(hermes, intent_message)
+        elif  intent_message.intent.intent_name in self.default_intent_map:
+            func = self.default_intent_map[intent_message.intent.intent_name]
             func(hermes, intent_message)
     
     def not_recognized_function(self, hermes, message):
@@ -144,7 +190,7 @@ class ClientAction():
             hermes.publish_continue_session(message.session_id,
                 tts,
                 send_intent_not_recognized = True,
-                intent_filter = continue_obj.get_intents()
+                intent_filter = self.get_intent_continue(continue_obj.funcs)
             )
         elif continue_obj.not_recognized_func is not None:
             hermes.publish_end_session(message.session_id, continue_obj.not_recognized_func(hermes, message))
@@ -208,6 +254,9 @@ class ClientAction():
                     h.loop_forever()
                 else:
                     h.loop_start()
+                    self.h = h
         except LibException:
             print("could not connect to broker: {}".format(self.__mqtt_addr))
-            time.sleep(60)
+
+    def stop(self):
+        self.h.loop_stop()

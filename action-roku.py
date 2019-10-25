@@ -5,7 +5,8 @@ import sys
 
 from hermes_demo_helper.lang_config import Lang_config
 from hermes_demo_helper.snipsTools import SnipsConfigParser
-from snipsroku.clientMPU import ClientMPU
+from hermes_demo_helper.hermes_demo_helper import SnipsFlow
+from snipsroku.clientMPU import flow
 from snipsroku.snipsroku import SnipsRoku
 
 CONFIG_INI = "config.ini"
@@ -20,6 +21,7 @@ MQTT_ADDR_LOCAL = "{}:{}".format(MQTT_ADDR_LOCAL_HOST, MQTT_ADDR_LOCAL_PORT)
 lang_config = Lang_config(config.get('resources'))
 
 roku_ip = config_s.get("roku_device_ip")
+
 roku_player = None
 try:
     roku_player = SnipsRoku(roku_device_ip=roku_ip)
@@ -27,8 +29,8 @@ except:
     print("fail to connect to ROKU")
     sys.exit(1)
 
-# default configuration
-clientLocal = ClientMPU(MQTT_ADDR_LOCAL, lang_config, roku_player)
-
 if __name__ == "__main__":
-        clientLocal.start(loop=True)
+    flow.set_host(MQTT_ADDR_LOCAL)
+    flow.set_lang_config(lang_config)
+    flow.set_data(roku_player=roku_player)
+    flow.start(loop=True)
