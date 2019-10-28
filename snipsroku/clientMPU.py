@@ -1,8 +1,8 @@
 
-from hermes_demo_helper.hermes_demo_helper import SnipsFlow, ContinueObject
+from hermes_demo_helper.hermes_demo_helper import SnipsFlow
 flow = SnipsFlow()
 
-@flow.intent("play_content", "media_provider", "season", "media_content", "roku_player")
+@flow.intent(intent="play_content", slots=("media_provider", "season", "media_content"), data=("roku_player"))
 def play_content(media_provider, season, media_content, roku_player):
     try:
         roku_player.search_content(content_type=None,
@@ -13,54 +13,56 @@ def play_content(media_provider, season, media_content, roku_player):
                                         season=season)
     except ValueError as e:
         return e
-    return ""
+    return flow.end_session()
 
-@flow.intent("search_content", "content_type", "search_keyword", "roku_player")
+@flow.intent(intent="search_content", slots=("content_type", "search_keyword"), data=("roku_player"))
 def search_content(content_type, search_keyword, roku_player):
     roku_player.search_content(content_type, search_keyword)
-    return ""
+    return flow.end_session()
 
-@flow.intent("go_home", "roku_player")
+@flow.intent(intent="go_home", data=("roku_player"))
 def go_home(roku_player):
     roku_player.home_screen()
-    return ""
+    return flow.end_session()
 
-@flow.intent("launch_app", "roku_player", "app_name")
+@flow.intent(intent="launch_app", slots=("app_name"), data=("roku_player"))
 def launch_app(app_name, roku_player):
     app_id = roku_player.get_app_id(app_name)
     roku_player.launch_app(app_id)
-    return ""
+    return flow.end_session()
 
-@flow.intent_on_continue("tv_play", "roku_player")
-@flow.intent("tv_play", "roku_player")
+@flow.on_continue(intent="tv_play", data=("roku_player"))
+@flow.intent(intent="tv_play", data=("roku_player"))
 def tv_play(roku_player):
     roku_player.play()
-    return ""
+    return flow.end_session()
 
-@flow.intent("tv_pause", "roku_player")
+@flow.intent(intent="tv_pause", data=("roku_player"))
 def tv_pause(roku_player):
     roku_player.pause()
-    return ""
+    return flow.end_session()
 
-@flow.intent_with_continue("tv_forward", "roku_player")
+@flow.intent(intent="tv_forward", data=("roku_player"))
 def tv_forward(roku_player):
     roku_player.forward()
-    return ContinueObject(
+    return flow.continue_session(
         [tv_play],
         "",
         not_recognized_func,
-        nb_second=10,
+        timeout=10,
         sound_feedback=False)
 
-@flow.intent_with_continue("tv_reverse", "roku_player")
+@flow.intent(intent="tv_reverse", data=("roku_player"))
 def tv_reverse(roku_player):
     roku_player.reverse()
-    return ContinueObject(
+    return flow.continue_session(
         [tv_play],
         "",
         not_recognized_func,
-        nb_second=10,
+        timeout=10,
         sound_feedback=False)
+
 @flow.not_recognized("roku_player")
 def not_recognized_func(roku_player):
     roku_player.play()
+    return ""

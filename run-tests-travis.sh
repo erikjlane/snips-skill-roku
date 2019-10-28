@@ -19,4 +19,4 @@ fi
 . $VENV/bin/activate
 
 pip3 install -r requirements-dev.txt
-py.test -sv tests/test_intents.py::test_intent_go_home
+py.test -vvvvv tests/test_intents.py::test_intent_go_home
