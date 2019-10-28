@@ -97,6 +97,7 @@ class SnipsFlow():
 
     def set_host(self, host):
         self.__mqtt_addr = host
+
     
     def intent(self, intent, *options, slots=[], data=[]):
         """ Decorator for function that handle intent for the first iteration of the flow
@@ -116,41 +117,10 @@ class SnipsFlow():
             save thanks to set_data
         """
         def decorator(f):
-            def wrapper(hermes, intent_message):
-                confidence_score = intent_message.intent.confidence_score
-                threshold_1 = self.config.intents.get_threshold("intentBad")
-                threshold_2 = self.config.intents.get_threshold("intentGood")
-                if confidence_score <= threshold_1:
-                    tts = self.config.tts.get_value("ErrorIntentGood")
-                    hermes.publish_end_session(intent_message.session_id, tts)
-                elif confidence_score <= threshold_2:
-                    tts = self.config.tts.get_value("ErrorIntentBad")
-                    hermes.publish_end_session(intent_message.session_id, tts)
-                else:
-                    session = f(
-                        **self._slots(intent_message, hermes, slots, data, options))
-                    if isinstance(session, str):
-                        hermes.publish_end_session(
-                            intent_message.session_id, session)
-                        return
-                    if isinstance(session, SnipsFlow.EndSession):
-                        hermes.publish_end_session(
-                            intent_message.session_id, session.tts)
-                        return
-                    self._save_session(
-                        intent_message.session_id, session, hermes)
-                    if session.sound_feedback:
-                        hermes.enable_sound_feedback(
-                            SiteMessage(intent_message.site_id))
-                    else:
-                        hermes.disable_sound_feedback(
-                            SiteMessage(intent_message.site_id))
-                    hermes.publish_continue_session(intent_message.session_id,
-                                                    session.tts,
-                                                    send_intent_not_recognized=session.send_intent_not_recognized(),
-                                                    intent_filter=self._get_intent_continue(
-                                                        session.funcs)
-                                                    )
+            if "SnipsFlow.intent" in f.__qualname__ or "SnipsFlow.on_continue" in f.__qualname__:
+                wrapper = lambda hermes, intent_message: self._handler_wrapper(hermes, intent_message, f, ["hermes", "intent_message"],[],[])
+            else:
+                wrapper = lambda hermes, intent_message: self._handler_wrapper(hermes, intent_message, f, options, slots, data)
             self._default_intent_map[intent] = wrapper
             return wrapper
         return decorator
@@ -191,44 +161,49 @@ class SnipsFlow():
             save thanks to set_data
         """
         def decorator(f):
-            def wrapper(hermes, intent_message):
-                confidence_score = intent_message.intent.confidence_score
-                threshold_1 = self.config.intents.get_threshold("intentBad")
-                threshold_2 = self.config.intents.get_threshold("intentGood")
-                if confidence_score <= threshold_1:
-                    tts = self.config.tts.get_value("ErrorIntentGood")
-                    hermes.publish_end_session(intent_message.session_id, tts)
-                elif confidence_score <= threshold_2:
-                    tts = self.config.tts.get_value("ErrorIntentBad")
-                    hermes.publish_end_session(intent_message.session_id, tts)
-                else:
-                    session = f(
-                        **self._slots(intent_message, hermes, slots, data, options))
-                    if isinstance(session, str):
-                        hermes.publish_end_session(
-                            intent_message.session_id, session)
-                        return
-                    if isinstance(session, SnipsFlow.EndSession):
-                        hermes.publish_end_session(
-                            intent_message.session_id, session.tts)
-                        return
-                    self._save_session(
-                        intent_message.session_id, session, hermes)
-                    if session.sound_feedback:
-                        hermes.enable_sound_feedback(
-                            SiteMessage(intent_message.site_id))
-                    else:
-                        hermes.disable_sound_feedback(
-                            SiteMessage(intent_message.site_id))
-                    hermes.publish_continue_session(intent_message.session_id,
-                                                    session.tts,
-                                                    send_intent_not_recognized=session.send_intent_not_recognized(),
-                                                    intent_filter=self._get_intent_continue(
-                                                        session.funcs)
-                                                    )
+            if "SnipsFlow.intent" in f.__qualname__ or "SnipsFlow.on_continue" in f.__qualname__:
+                wrapper = lambda hermes, intent_message: self._handler_wrapper(hermes, intent_message, f, ["hermes", "intent_message"],[],[])
+            else:
+                wrapper = lambda hermes, intent_message: self._handler_wrapper(hermes, intent_message, f, options, slots, data)
             self._continue_intent_map[wrapper] = intent
             return wrapper
         return decorator
+    
+    def _handler_wrapper(self, hermes, intent_message, f, options, slots, data):
+        confidence_score = intent_message.intent.confidence_score
+        threshold_1 = self.config.intents.get_threshold("intentBad")
+        threshold_2 = self.config.intents.get_threshold("intentGood")
+        if confidence_score <= threshold_1:
+            tts = self.config.tts.get_value("ErrorIntentGood")
+            hermes.publish_end_session(intent_message.session_id, tts)
+        elif confidence_score <= threshold_2:
+            tts = self.config.tts.get_value("ErrorIntentBad")
+            hermes.publish_end_session(intent_message.session_id, tts)
+        else:
+            session = f(
+                **self._slots(intent_message, hermes, slots, data, options))
+            if isinstance(session, str):
+                hermes.publish_end_session(
+                    intent_message.session_id, session)
+                return
+            if isinstance(session, SnipsFlow.EndSession):
+                hermes.publish_end_session(
+                    intent_message.session_id, session.tts)
+                return
+            self._save_session(
+                intent_message.session_id, session, hermes)
+            if session.sound_feedback:
+                hermes.enable_sound_feedback(
+                    SiteMessage(intent_message.site_id))
+            else:
+                hermes.disable_sound_feedback(
+                    SiteMessage(intent_message.site_id))
+            hermes.publish_continue_session(intent_message.session_id,
+                                            session.tts,
+                                            send_intent_not_recognized=session.send_intent_not_recognized(),
+                                            intent_filter=self._get_intent_continue(
+                                                session.funcs)
+                                            )
 
     @staticmethod
     def end_session(tts=None):
