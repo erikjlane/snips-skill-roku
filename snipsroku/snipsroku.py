@@ -122,9 +122,11 @@ class SnipsRoku:
         self.device.home()
     
     def reverse(self):
+        self._is_playing = False
         self.device.reverse()
 
     def forward(self):
+        self._is_playing = False
         self.device.forward()
 
     @staticmethod

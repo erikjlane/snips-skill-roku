@@ -1,6 +1,7 @@
 from hermes_python.ffi import LibException
 from hermes_python.hermes import Hermes
 from hermes_python.ontology.feedback import SiteMessage
+from hermes_python.ontology.dialogue.session import SessionTerminationTypeAbortedByUser
 import time
 import threading
 
@@ -18,7 +19,7 @@ class SnipsFlow():
             self.tts = tts
 
     class ContinueSession():
-        def __init__(self, funcs, tts, not_recognized_func=None, retry_count=0, timeout=-1, sound_feedback=True):
+        def __init__(self, funcs, tts, not_recognized_func=None, retry_count=0, timeout=-1, sound_feedback=True, cancel_by_user_callback=None):
             self.funcs = funcs
             self.tts = tts
             self.not_recognized_func = not_recognized_func
@@ -27,6 +28,8 @@ class SnipsFlow():
             if timeout != -1:
                 retry_count = -1
             self.retry_count = retry_count
+            self.cancel_by_user_callback = cancel_by_user_callback
+
 
         def send_intent_not_recognized(self):
             return self.retry_count == 0 \
@@ -54,32 +57,37 @@ class SnipsFlow():
         self.h = None
 
     def start(self, loop=False):
+        def command(h):
+            print("connected to: {}".format(self.__mqtt_addr))
+            h.subscribe_intents(self._handler)
+            h.subscribe_session_ended(self._end_session_handler)
+            h.subscribe_intent_not_recognized(self._not_recognized_handler)
+            for site_id in ["default"]:
+                h.publish_start_session_notification(site_id,
+                                                        self.config.tts.get_value("Ready"), None)
+            return h
         try:
-            with Hermes(self.__mqtt_addr) as h:
-                print("connected to: {}".format(self.__mqtt_addr))
-                h.subscribe_intents(self._handler)
-                h.subscribe_session_ended(self._end_session_handler)
-                h.subscribe_intent_not_recognized(self._not_recognized_handler)
-                for site_id in ["default"]:
-                    h.publish_start_session_notification(site_id,
-                                                         self.config.tts.get_value("Ready"), None)
-                if (loop):
-                    h.loop_forever()
-                else:
-                    h.loop_start()
-                    self.h = h
+            if (loop):
+                with Hermes(self.__mqtt_addr) as h:
+                    command(h).loop_forever()
+            else:
+                h = Hermes(self.__mqtt_addr)
+                h.connect()
+                command(h).loop_start()
+                self.h = h
         except LibException:
             print("could not connect to broker: {}".format(self.__mqtt_addr))
 
     def stop(self):
         if self.h is not None:
-            self.h.loop_stop()
+            self.h.disconnect()
 
     def set_lang_config(self, lang_config):
         self.config = lang_config
         for key, f in self._default_intent_map.items():
             for name in self.config.intents.get_intent(key):
                 self.default_intent_map[name] = f
+        print(self.continue_intent_map)
         for f, key in self._continue_intent_map.items():
             for name in self.config.intents.get_intent(key):
                 self.continue_intent_map[f] = name
@@ -89,7 +97,7 @@ class SnipsFlow():
 
     def set_host(self, host):
         self.__mqtt_addr = host
-
+    
     def intent(self, intent, *options, slots=[], data=[]):
         """ Decorator for function that handle intent for the first iteration of the flow
 
@@ -119,29 +127,29 @@ class SnipsFlow():
                     tts = self.config.tts.get_value("ErrorIntentBad")
                     hermes.publish_end_session(intent_message.session_id, tts)
                 else:
-                    continueObject = f(
+                    session = f(
                         **self._slots(intent_message, hermes, slots, data, options))
-                    if isinstance(continueObject, str):
+                    if isinstance(session, str):
                         hermes.publish_end_session(
-                            intent_message.session_id, continueObject)
+                            intent_message.session_id, session)
                         return
-                    if isinstance(continueObject, SnipsFlow.EndSession):
+                    if isinstance(session, SnipsFlow.EndSession):
                         hermes.publish_end_session(
-                            intent_message.session_id, continueObject.tts)
+                            intent_message.session_id, session.tts)
                         return
-                    self._save_continue_object(
-                        intent_message.session_id, continueObject, hermes)
-                    if continueObject.sound_feedback:
+                    self._save_session(
+                        intent_message.session_id, session, hermes)
+                    if session.sound_feedback:
                         hermes.enable_sound_feedback(
                             SiteMessage(intent_message.site_id))
                     else:
                         hermes.disable_sound_feedback(
                             SiteMessage(intent_message.site_id))
                     hermes.publish_continue_session(intent_message.session_id,
-                                                    continueObject.tts,
-                                                    send_intent_not_recognized=continueObject.send_intent_not_recognized(),
+                                                    session.tts,
+                                                    send_intent_not_recognized=session.send_intent_not_recognized(),
                                                     intent_filter=self._get_intent_continue(
-                                                        continueObject.funcs)
+                                                        session.funcs)
                                                     )
             self._default_intent_map[intent] = wrapper
             return wrapper
@@ -183,7 +191,6 @@ class SnipsFlow():
             save thanks to set_data
         """
         def decorator(f):
-            self._continue_intent_map[f] = intent
             def wrapper(hermes, intent_message):
                 confidence_score = intent_message.intent.confidence_score
                 threshold_1 = self.config.intents.get_threshold("intentBad")
@@ -195,30 +202,31 @@ class SnipsFlow():
                     tts = self.config.tts.get_value("ErrorIntentBad")
                     hermes.publish_end_session(intent_message.session_id, tts)
                 else:
-                    continueObject = f(
+                    session = f(
                         **self._slots(intent_message, hermes, slots, data, options))
-                    if isinstance(continueObject, str):
+                    if isinstance(session, str):
                         hermes.publish_end_session(
-                            intent_message.session_id, continueObject)
+                            intent_message.session_id, session)
                         return
-                    if isinstance(continueObject, SnipsFlow.EndSession):
+                    if isinstance(session, SnipsFlow.EndSession):
                         hermes.publish_end_session(
-                            intent_message.session_id, continueObject.tts)
+                            intent_message.session_id, session.tts)
                         return
-                    self._save_continue_object(
-                        intent_message.session_id, continueObject, hermes)
-                    if continueObject.sound_feedback:
+                    self._save_session(
+                        intent_message.session_id, session, hermes)
+                    if session.sound_feedback:
                         hermes.enable_sound_feedback(
                             SiteMessage(intent_message.site_id))
                     else:
                         hermes.disable_sound_feedback(
                             SiteMessage(intent_message.site_id))
                     hermes.publish_continue_session(intent_message.session_id,
-                                                    continueObject.tts,
-                                                    send_intent_not_recognized=continueObject.send_intent_not_recognized(),
+                                                    session.tts,
+                                                    send_intent_not_recognized=session.send_intent_not_recognized(),
                                                     intent_filter=self._get_intent_continue(
-                                                        continueObject.funcs)
+                                                        session.funcs)
                                                     )
+            self._continue_intent_map[wrapper] = intent
             return wrapper
         return decorator
 
@@ -226,8 +234,8 @@ class SnipsFlow():
     def end_session(tts=None):
         return SnipsFlow.EndSession(tts)
 
-    def continue_session(self, funcs, tts, not_recognized_func=None, retry_count=0, timeout=-1, sound_feedback=True):
-        return SnipsFlow.ContinueSession(funcs, tts, not_recognized_func, retry_count, timeout, sound_feedback)
+    def continue_session(self, funcs, tts, not_recognized_func=None, retry_count=0, timeout=-1, sound_feedback=True, cancel_by_user_callback=None):
+        return SnipsFlow.ContinueSession(funcs, tts, not_recognized_func, retry_count, timeout, sound_feedback, cancel_by_user_callback)
 
     def _not_recognized_handler(self, hermes, message):
         if message.session_id not in self.continue_session_ids:
@@ -277,9 +285,9 @@ class SnipsFlow():
                     result[arg] = self._extract_value(intent_message, arg)
         return result
 
-    def _save_continue_object(self, session_id, obj, hermes):
+    def _save_session(self, session_id, obj, hermes):
         self.continue_session_ids[session_id] = obj
-        if obj.retry_count <= -1:
+        if obj.retry_count > -1:
             return
         threading.Timer(obj.timeout,
                         self._run_not_recognized_timeout,
@@ -288,6 +296,8 @@ class SnipsFlow():
 
     def _get_intent_continue(self, funcs):
         result = []
+        print(funcs)
+        print(self._continue_intent_map)
         for func in funcs:
             if func in self.continue_intent_map:
                 result.append(self.continue_intent_map[func])
@@ -301,7 +311,6 @@ class SnipsFlow():
             session_id, obj.not_recognized_func(hermes, None))
 
     def _handler(self, hermes, intent_message):
-        print("totototototototootoo")
         if intent_message.session_id in self.continue_session_ids:
             funcs = self.continue_session_ids[intent_message.session_id].funcs
             for func in funcs:
@@ -319,6 +328,9 @@ class SnipsFlow():
             hermes.enable_sound_feedback(SiteMessage(message.site_id))
         else:
             hermes.enable_sound_feedback(SiteMessage(message.site_id))
+        if message.termination == SessionTerminationTypeAbortedByUser:
+            if continue_obj.cancel_by_user_callback is not None:
+                continue_obj.cancel_by_user_callback(hermes, message)
 
     def _extract_defaults(self, intent_message, slot_name):
         result = []

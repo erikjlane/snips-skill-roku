@@ -127,7 +127,7 @@ def test_intent_tv_forward_play(requests_mock, mqtt_server):
     assert requests_mock.call_count == 3
     assert requests_mock.last_request.path in 'http://localhost:8060/keypress/play'
 
-def test_intent_tv_forward_play_wait(requests_mock, mqtt_server):
+def test_intent_tv_forward_play_cancel(requests_mock, mqtt_server):
     payload, site_id, session_id = create_intent("tv_forward_intent.json")
     requests_mock.post("http://localhost:8060/keypress/Fwd", text="OK")
     with init_app(requests_mock, mqtt_server):
@@ -142,7 +142,7 @@ def test_intent_tv_forward_play_wait(requests_mock, mqtt_server):
                payload=payload,
                port=mqtt_server[0])
         time.sleep(0.1)
-        payload, site_id, session_id = create_intent("end_session_nominal.json", site_id, session_id)
+        payload, site_id, session_id = create_intent("end_session_cancel.json", site_id, session_id)
         single("hermes/dialogueManager/sessionEnded",
                payload=payload,
                port=mqtt_server[0])

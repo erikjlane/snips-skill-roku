@@ -31,9 +31,13 @@ def launch_app(app_name, roku_player):
     roku_player.launch_app(app_id)
     return flow.end_session()
 
-@flow.on_continue(intent="tv_play", data=("roku_player"))
 @flow.intent(intent="tv_play", data=("roku_player"))
 def tv_play(roku_player):
+    roku_player.play()
+    return flow.end_session()
+
+@flow.on_continue(intent="tv_play", data=("roku_player"))
+def tv_play2(roku_player):
     roku_player.play()
     return flow.end_session()
 
@@ -46,23 +50,26 @@ def tv_pause(roku_player):
 def tv_forward(roku_player):
     roku_player.forward()
     return flow.continue_session(
-        [tv_play],
+        [tv_play2],
         "",
         not_recognized_func,
         timeout=10,
-        sound_feedback=False)
+        sound_feedback=False,
+        cancel_by_user_callback=not_recognized_func)
 
 @flow.intent(intent="tv_reverse", data=("roku_player"))
 def tv_reverse(roku_player):
     roku_player.reverse()
     return flow.continue_session(
-        [tv_play],
+        [tv_play2],
         "",
         not_recognized_func,
         timeout=10,
-        sound_feedback=False)
+        sound_feedback=False,
+        cancel_by_user_callback=not_recognized_func)
 
 @flow.not_recognized("roku_player")
 def not_recognized_func(roku_player):
+    print("wnsfkbnsrfbvbksdjbkvlbj")
     roku_player.play()
     return ""
